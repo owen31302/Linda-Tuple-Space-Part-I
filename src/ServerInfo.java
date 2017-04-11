@@ -14,6 +14,11 @@ public class ServerInfo implements java.io.Serializable{
         _port = port;
     }
 
+    ServerInfo(String ipAddr, int port){
+        _ipAddr = ipAddr;
+        _port = port;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof ServerInfo)){

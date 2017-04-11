@@ -1,3 +1,8 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Created by owen on 4/9/17.
  */
@@ -15,6 +20,22 @@ public class UIParser {
         }else{
             return "";
         }
+    }
+
+    public static List<ServerInfo> addMultipleParser(String str){
+        List<String> matches = get_matches(str, "\\((.*?)\\)");
+
+        List<ServerInfo> result = new ArrayList<>();
+        StringBuilder ip;
+        StringBuilder port;
+        for(String s : matches){
+            ip = new StringBuilder();
+            port = new StringBuilder();
+            if(addParser(s, ip, port)){
+                result.add(new ServerInfo(ip.toString(), Integer.parseInt(port.toString())));
+            }
+        }
+        return result;
     }
 
     public static boolean addParser(String s, StringBuilder ip, StringBuilder port){
@@ -49,5 +70,19 @@ public class UIParser {
             return true;
         }
         return false;
+    }
+
+    public static boolean outParser(String str, List<Element> list){
+        return false;
+    }
+
+    public static List<String> get_matches(String s, String p) {
+        // returns all matches of p in s for first group in regular expression
+        List<String> matches = new ArrayList<>();
+        Matcher m = Pattern.compile(p).matcher(s);
+        while(m.find()) {
+            matches.add(m.group(1));
+        }
+        return matches;
     }
 }

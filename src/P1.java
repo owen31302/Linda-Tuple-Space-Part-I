@@ -2,8 +2,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by owen on 4/9/17.
@@ -38,7 +42,6 @@ public class P1 {
             System.out.print("InterruptedException\n");
         }
 
-
         // UI logic
         while(fsm != UIFSM.EXIT){
             switch (fsm){
@@ -60,12 +63,9 @@ public class P1 {
                     }
                     break;
                 case ADD:
-                    StringBuilder ip = new StringBuilder();
-                    StringBuilder port = new StringBuilder();
-                    if(UIParser.addParser(userChoice.toString(), ip, port)){
-                        addRequest(ip.toString(), Integer.parseInt(port.toString()), Server._threadSafeList);
-                    }else{
-                        System.out.print("Please enter the correct format.\n");
+                    List<ServerInfo> serverInfos = UIParser.addMultipleParser(userChoice.toString());
+                    for(ServerInfo s : serverInfos){
+                        addRequest(s._ipAddr, s._port, Server._threadSafeList);
                     }
                     fsm = UIFSM.IDLE;
                     break;
@@ -73,7 +73,12 @@ public class P1 {
                     fsm = UIFSM.IDLE;
                     break;
                 case OUT:
-                    
+                    List<Element> list = new ArrayList<>();
+                    if(UIParser.outParser(userChoice.toString(), list)){
+                        //outRequest(ip.toString(), Integer.parseInt(port.toString()), Server._threadSafeList);
+                    }else{
+                        System.out.print("Please enter the correct format.\n");
+                    }
                     fsm = UIFSM.IDLE;
                     break;
                 case IN:
@@ -95,6 +100,19 @@ public class P1 {
             Socket socket = new Socket(ip, port);
             ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
             os.writeInt(RequestProtocol.ADD);
+            os.writeObject(list);
+            os.close();
+            socket.close();
+        }catch (IOException e){
+            System.out.print("IOException: " + e + "\n" );
+        }
+    }
+
+    public static void outRequest(String ip, int port, List<Element> list){
+        try{
+            Socket socket = new Socket(ip, port);
+            ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
+            os.writeInt(RequestProtocol.OUT);
             os.writeObject(list);
             os.close();
             socket.close();
