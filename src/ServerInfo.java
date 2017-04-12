@@ -28,7 +28,7 @@ public class ServerInfo implements java.io.Serializable{
             return true;
         }
         ServerInfo that = (ServerInfo)obj;
-        if( this._id == that._id && this._name.equals(that._name) && this._ipAddr.equals(that._ipAddr) && this._port==that._port){
+        if( this._id == that._id && this._name.equals(that._name) && this._ipAddr.equals(that._ipAddr)){
             return true;
         }
         return false;
@@ -36,6 +36,6 @@ public class ServerInfo implements java.io.Serializable{
 
     @Override
     public int hashCode() {
-        return this._id * this._name.hashCode() * this._ipAddr.hashCode() * this._port;
+        return this._id * this._name.hashCode() * this._ipAddr.hashCode();
     }
 }

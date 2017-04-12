@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -13,6 +14,7 @@ public class Server implements Runnable{
     static private String _ip;
     static private int _port;
     static public CopyOnWriteArrayList<ServerInfo> _threadSafeList = new CopyOnWriteArrayList<>();
+    static public ConcurrentHashMap<Tuple, Integer> _concurrentHashMap = new ConcurrentHashMap<>();
 
     @Override
     public void run() {

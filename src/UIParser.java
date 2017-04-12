@@ -13,6 +13,8 @@ public class UIParser {
             return "add";
         }else if ( s.length() >= 3 && s.substring(0, 3).equals("out")){
             return "out";
+        }else if ( s.length() >= 2 && s.substring(0, 2).equals("rd")){
+            return "rd";
         }else if  ( s.length() >= 2 && s.substring(0, 2).equals("in")){
             return "in";
         }else if  ( s.length() >= "delete".length() && s.substring(0, "delete".length()).equals("delete")){
@@ -72,8 +74,52 @@ public class UIParser {
         return false;
     }
 
-    public static boolean outParser(String str, List<Element> list){
-        return false;
+    public static boolean outParser(String str, Tuple tuple){
+
+        /**
+         * 1. Find "("
+         * 2. Find ")" after "("
+         * 3. Split using ","
+         * 4. Trim the content
+         * 5. Check if content is nothing ie. "", then return false
+         * 6. Check String
+         * 7. Check Integer
+         * 8. Last one will be float
+         */
+
+        int leftP = str.indexOf("(");
+        if(leftP == -1 ){
+            return false;
+        }
+        int rightP = str.indexOf(")", leftP+1);
+        if(rightP == -1){
+            return false;
+        }
+
+        String subStr = str.substring(leftP+1, rightP);
+        String[] subStrArray = subStr.split(",");
+        for(int i = 0; i<subStrArray.length; i++){
+            subStrArray[i] = subStrArray[i].trim();
+            if(subStrArray[i].equals("")){
+                return false;
+            }else{
+                if(!(subStrArray[i].indexOf("\"") != subStrArray[i].lastIndexOf("\""))){
+                    try {
+                        Integer.parseInt(subStrArray[i]);
+                    }catch (NumberFormatException e){
+                        try{
+                            Float.parseFloat(subStrArray[i]);
+                        }catch (NumberFormatException e1){
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        tuple.set_list(subStrArray);
+
+        return true;
     }
 
     public static List<String> get_matches(String s, String p) {

@@ -78,6 +78,7 @@ public class FileController {
             for(int i = 0; i<threadSafeList.size(); i++){
                 if(threadSafeList.get(i)._name.equals(name)){
                     System.out.print("Server name is in existed lists.\n");
+                    threadSafeList.get(i)._port = Server.get_port();
                     return true;
                 }
             }
