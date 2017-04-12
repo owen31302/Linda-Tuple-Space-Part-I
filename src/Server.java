@@ -16,6 +16,8 @@ public class Server implements Runnable{
     static public CopyOnWriteArrayList<ServerInfo> _threadSafeList = new CopyOnWriteArrayList<>();
     static public ConcurrentHashMap<Tuple, Integer> _concurrentHashMap = new ConcurrentHashMap<>();
 
+    public static final Object LOCK = new Object();
+
     @Override
     public void run() {
 

@@ -65,33 +65,40 @@ public class Worker implements Runnable {
                 case RequestProtocol.OUT:
                     System.out.print("RequestProtocol: OUT\n");
                     Tuple temp = (Tuple)ois.readObject();
+                    _clientSocket.close();
                     if(Server._concurrentHashMap.containsKey(temp)){
                         Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) + 1);
                     }else{
                         Server._concurrentHashMap.put(temp, 1);
                     }
+                    synchronized (Server.LOCK) {
+                        Server.LOCK.notifyAll();
+                    }
                     break;
                 case RequestProtocol.IN:
                     System.out.print("RequestProtocol: IN\n");
                     temp = (Tuple)ois.readObject();
-                    if(Server._concurrentHashMap.containsKey(temp)){
-                        oos.writeInt(RequestProtocol.HASTUPLE);
-                        oos.flush();
-                        int ack = ois.readInt();
-                        if(ack == RequestProtocol.ACK){
-                            if(Server._concurrentHashMap.get(temp) == 1){
-                                Server._concurrentHashMap.remove(temp);
-                            }else {
-                                Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) - 1);
+                    synchronized (Server.LOCK) {
+                        while (!Server._concurrentHashMap.containsKey(temp)){
+                            try {
+                                Server.LOCK.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
                             }
-                        }else{
-                            System.out.print("Some thing wrong.\n");
+                        }
+                    }
+                    oos.writeInt(RequestProtocol.HASTUPLE);
+                    oos.flush();
+                    int ack = ois.readInt();
+                    if(ack == RequestProtocol.ACK){
+                        if(Server._concurrentHashMap.get(temp) == 1){
+                            Server._concurrentHashMap.remove(temp);
+                        }else {
+                            Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) - 1);
                         }
                     }else{
-                        System.out.print("NOTUPLE\n");
-                        oos.writeInt(RequestProtocol.NOTUPLE);
+                        System.out.print("Some thing wrong.\n");
                     }
-                    oos.flush();
                     oos.close();
                     ois.close();
                     _clientSocket.close();
@@ -99,19 +106,22 @@ public class Worker implements Runnable {
                 case RequestProtocol.RD:
                     System.out.print("RequestProtocol: RD\n");
                     temp = (Tuple)ois.readObject();
-                    if(Server._concurrentHashMap.containsKey(temp)){
-                        oos.writeInt(RequestProtocol.HASTUPLE);
-                    }else{
-                        oos.writeInt(RequestProtocol.NOTUPLE);
+                    synchronized (Server.LOCK) {
+                        while (!Server._concurrentHashMap.containsKey(temp)){
+                            try {
+                                Server.LOCK.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
                     }
+                    oos.writeInt(RequestProtocol.HASTUPLE);
                     oos.flush();
                     oos.close();
                     ois.close();
                     _clientSocket.close();
                     break;
             }
-
-
         }catch (java.io.IOException e){
             System.out.print("IOException worker " + e + "\n");
         }catch (java.lang.ClassNotFoundException e){
