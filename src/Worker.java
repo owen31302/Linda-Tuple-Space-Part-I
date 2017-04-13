@@ -157,15 +157,15 @@ public class Worker implements Runnable {
                                                         }
                                                         break;
                                                 }
-                                                temp = t;
-                                                find = true;
-                                                break outerLoop;
                                             }else{
                                                 if(!t.get_list()[i].equals(temp.get_list()[i])){
                                                     continue outerLoop;
                                                 }
                                             } // ? or not
                                         } // matching every column
+                                        temp = t;
+                                        find = true;
+                                        break outerLoop;
                                     } // check length
                                 } // for
                                 if(!find){
