@@ -103,7 +103,7 @@ public class P1 {
                 case RD:
                     tuple = new Tuple();
                     if(UIParser.outParser(userChoice.toString(), tuple)){
-                        if(tuple.get_list().length == 0){
+                        if(tuple.get_qLocations().size() == 0){
                             int index = Md5sum(tuple, Server._threadSafeList.size());
                             if(readRequest(Server._threadSafeList.get(index)._ipAddr,
                                     Server._threadSafeList.get(index)._port, tuple)){
@@ -162,9 +162,6 @@ public class P1 {
                     break;
             }
         }
-
-
-
     }
 
     public static void addRequest(String ip, int port, CopyOnWriteArrayList<ServerInfo> list){

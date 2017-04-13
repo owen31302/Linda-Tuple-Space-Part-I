@@ -122,6 +122,7 @@ public class Worker implements Runnable {
                             oos.flush();
                         }else{
                             while (!find){
+                                outerLoop:
                                 for(Tuple t : Server._concurrentHashMap.keySet()){
                                     if(temp.get_list().length == t.get_list().length){
                                         for(int i = 0; i<temp.get_list().length; i++){
@@ -131,35 +132,41 @@ public class Worker implements Runnable {
                                                 switch (type){
                                                     case "string":
                                                         if(t.get_list()[i].charAt(0) != '"'){
-                                                            continue;
+                                                            continue outerLoop;
                                                         }
                                                         break;
                                                     case "int":
+                                                        try {
+                                                            Integer.parseInt(t.get_list()[i]);
+                                                        }catch (NumberFormatException e){
+                                                            continue outerLoop;
+                                                        }
+                                                        break;
                                                     case "integer":
                                                         try {
                                                             Integer.parseInt(t.get_list()[i]);
                                                         }catch (NumberFormatException e){
-                                                            continue;
+                                                            continue outerLoop;
                                                         }
                                                         break;
                                                     case "float":
                                                         try{
                                                             Float.parseFloat(t.get_list()[i]);
                                                         }catch (NumberFormatException e1){
-                                                            continue;
+                                                            continue outerLoop;
                                                         }
                                                         break;
                                                 }
+                                                temp = t;
+                                                find = true;
+                                                break outerLoop;
                                             }else{
                                                 if(!t.get_list()[i].equals(temp.get_list()[i])){
-                                                    continue;
+                                                    continue outerLoop;
                                                 }
                                             } // ? or not
                                         } // matching every column
                                     } // check length
-                                    temp = t;
-                                    find = true;
-                                    break;
                                 } // for
                                 if(!find){
                                     try {
