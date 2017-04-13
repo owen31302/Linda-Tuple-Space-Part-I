@@ -1,15 +1,14 @@
 import java.io.Serializable;
+import java.util.ArrayList;
 
 /**
  * Created by owen on 4/10/17.
  */
 public class Tuple implements Serializable{
+
     private String[] _list;
     private String _str;
-
-    public Tuple(){
-
-    }
+    private ArrayList<Integer> _qLocations = new ArrayList<>();
 
     public void set_list(String[] list){
         _list = list;
@@ -20,6 +19,9 @@ public class Tuple implements Serializable{
     }
     public String get_str(){
         return _str;
+    }
+    public ArrayList<Integer> get_qLocations(){
+        return _qLocations;
     }
 
     private void constructString(){

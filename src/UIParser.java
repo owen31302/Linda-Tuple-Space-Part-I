@@ -83,8 +83,9 @@ public class UIParser {
          * 4. Trim the content
          * 5. Check if content is nothing ie. "", then return false
          * 6. Check String
-         * 7. Check Integer
-         * 8. Last one will be float
+         * 7. Check ? variable : data type
+         * 8. Check Integer
+         * 9. Last one will be float
          */
 
         int leftP = str.indexOf("(");
@@ -104,13 +105,27 @@ public class UIParser {
                 return false;
             }else{
                 if(!(subStrArray[i].indexOf("\"") != subStrArray[i].lastIndexOf("\""))){
-                    try {
-                        Integer.parseInt(subStrArray[i]);
-                    }catch (NumberFormatException e){
-                        try{
-                            Float.parseFloat(subStrArray[i]);
-                        }catch (NumberFormatException e1){
-                            return false;
+                    int index = subStrArray[i].indexOf(":", 1);
+                    String variable = "";
+                    String dataType = "";
+                    if(index > 0){
+                        variable = subStrArray[i].substring(1, index).trim();
+                        dataType = subStrArray[i].substring(index+1, subStrArray[i].length()).trim();
+                    }
+                    if(subStrArray[i].charAt(0) == '?' && index > 0 && !Character.isDigit(variable.charAt(0)) &&
+                            (dataType.equalsIgnoreCase("integer") || dataType.equalsIgnoreCase("int")||
+                            dataType.equalsIgnoreCase("string") || dataType.equalsIgnoreCase("float"))){
+                        subStrArray[i] = "?" + variable + ":" + dataType.toLowerCase();
+                        tuple.get_qLocations().add(i);
+                    }else{
+                        try {
+                            Integer.parseInt(subStrArray[i]);
+                        }catch (NumberFormatException e){
+                            try{
+                                Float.parseFloat(subStrArray[i]);
+                            }catch (NumberFormatException e1){
+                                return false;
+                            }
                         }
                     }
                 }
@@ -118,7 +133,6 @@ public class UIParser {
         }
 
         tuple.set_list(subStrArray);
-
         return true;
     }
 

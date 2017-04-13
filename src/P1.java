@@ -5,6 +5,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -14,6 +15,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Created by owen on 4/9/17.
  */
 public class P1 {
+
+    public static final Object QLOCK = new Object();
+    public static int _first = -1;
+    public static Tuple _tuple = new Tuple();
+
     public static void main(String[] args){
         Server.set_name(args[0]);
         Scanner in = new Scanner(System.in);
@@ -84,7 +90,7 @@ public class P1 {
                     break;
                 case OUT:
                     Tuple tuple = new Tuple();
-                    if(UIParser.outParser(userChoice.toString(), tuple)){
+                    if(UIParser.outParser(userChoice.toString(), tuple) && tuple.get_qLocations().size() == 0){
                         int index = Md5sum(tuple, Server._threadSafeList.size());
                         outRequest(Server._threadSafeList.get(index)._ipAddr,
                                     Server._threadSafeList.get(index)._port,
@@ -97,15 +103,34 @@ public class P1 {
                 case RD:
                     tuple = new Tuple();
                     if(UIParser.outParser(userChoice.toString(), tuple)){
-                        int index = Md5sum(tuple, Server._threadSafeList.size());
-                        if(readRequest(Server._threadSafeList.get(index)._ipAddr,
-                                Server._threadSafeList.get(index)._port,
-                                tuple)){
-                            msg = "rd tuple " + tuple.get_str() + " on " + Server._threadSafeList.get(index)._ipAddr+"\n";
-                            System.out.print(msg);
+                        if(tuple.get_list().length == 0){
+                            int index = Md5sum(tuple, Server._threadSafeList.size());
+                            if(readRequest(Server._threadSafeList.get(index)._ipAddr,
+                                    Server._threadSafeList.get(index)._port, tuple)){
+                                msg = "rd tuple " + tuple.get_str() + " on " + Server._threadSafeList.get(index)._ipAddr+"\n";
+                                System.out.print(msg);
+                            }
                         }else{
-                            msg = "Tuple does not exist.\n";
-                            System.out.print(msg);
+                            // broadcast
+                            ArrayList<Thread> threads = new ArrayList<>();
+                            for(int i = 0; i<Server._threadSafeList.size();i++){
+                                ServerInfo serverInfo = Server._threadSafeList.get(i);
+                                threads.add(new Thread(new UIWorker(i, serverInfo._ipAddr, serverInfo._port, tuple, UIFSM.RD.getValue())));
+                                threads.get(i).start();
+                            }
+                            synchronized (QLOCK){
+                                try {
+                                    QLOCK.wait();
+                                    for(Thread th : threads){
+                                        th.interrupt();
+                                    }
+                                    msg = "rd tuple " + _tuple.get_str() + " on " + Server._threadSafeList.get(P1._first)._ipAddr+"\n";
+                                    System.out.print(msg);
+                                    P1._first = -1;
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
                         }
                     }
                     fsm = UIFSM.IDLE;
@@ -176,12 +201,18 @@ public class P1 {
             os.writeInt(RequestProtocol.RD);
             os.writeObject(tuple);
             int result = is.readInt();
+            if(_tuple.get_list() == null){
+                _tuple.set_list(((Tuple) is.readObject()).get_list());
+            }
             is.close();
             os.close();
             socket.close();
             return result == RequestProtocol.HASTUPLE;
         }catch (IOException e){
             System.out.print("IOException: " + e + "\n" );
+            return false;
+        }catch (ClassNotFoundException e){
+            System.out.print("ClassNotFoundException: " + e + "\n");
             return false;
         }
     }

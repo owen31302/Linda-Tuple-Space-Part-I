@@ -97,7 +97,7 @@ public class Worker implements Runnable {
                             Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) - 1);
                         }
                     }else{
-                        System.out.print("Some thing wrong.\n");
+                        System.out.print("Cancel IN.\n");
                     }
                     oos.close();
                     ois.close();
@@ -106,16 +106,73 @@ public class Worker implements Runnable {
                 case RequestProtocol.RD:
                     System.out.print("RequestProtocol: RD\n");
                     temp = (Tuple)ois.readObject();
+                    boolean find = false;
                     synchronized (Server.LOCK) {
-                        while (!Server._concurrentHashMap.containsKey(temp)){
-                            try {
-                                Server.LOCK.wait();
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                        // size = 0 => no ?
+                        // size > 0 => has ?
+                        if(temp.get_qLocations().size() == 0){
+                            while (!Server._concurrentHashMap.containsKey(temp)){
+                                try {
+                                    Server.LOCK.wait();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
                             }
-                        }
-                    }
+                            oos.writeObject(temp);
+                            oos.flush();
+                        }else{
+                            while (!find){
+                                for(Tuple t : Server._concurrentHashMap.keySet()){
+                                    if(temp.get_list().length == t.get_list().length){
+                                        for(int i = 0; i<temp.get_list().length; i++){
+                                            if(temp.get_qLocations().contains(i)){
+                                                String str = temp.get_list()[i];
+                                                String type = str.substring(str.indexOf(":")+1, str.length());
+                                                switch (type){
+                                                    case "string":
+                                                        if(t.get_list()[i].charAt(0) != '"'){
+                                                            continue;
+                                                        }
+                                                        break;
+                                                    case "int":
+                                                    case "integer":
+                                                        try {
+                                                            Integer.parseInt(t.get_list()[i]);
+                                                        }catch (NumberFormatException e){
+                                                            continue;
+                                                        }
+                                                        break;
+                                                    case "float":
+                                                        try{
+                                                            Float.parseFloat(t.get_list()[i]);
+                                                        }catch (NumberFormatException e1){
+                                                            continue;
+                                                        }
+                                                        break;
+                                                }
+                                            }else{
+                                                if(!t.get_list()[i].equals(temp.get_list()[i])){
+                                                    continue;
+                                                }
+                                            } // ? or not
+                                        } // matching every column
+                                    } // check length
+                                    temp = t;
+                                    find = true;
+                                    break;
+                                } // for
+                                if(!find){
+                                    try {
+                                        Server.LOCK.wait();
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            } // while (!find)
+                        } //get_qLocations
+                    } //synchronized
                     oos.writeInt(RequestProtocol.HASTUPLE);
+                    oos.writeObject(temp);
                     oos.flush();
                     oos.close();
                     ois.close();

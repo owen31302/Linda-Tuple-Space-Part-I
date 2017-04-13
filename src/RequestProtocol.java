@@ -9,4 +9,5 @@ public class RequestProtocol {
     public static final int HASTUPLE = 4;
     public static final int NOTUPLE = 5;
     public static final int ACK = 6;
+    public static final int ACKNO = 7;
 }
