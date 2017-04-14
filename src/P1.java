@@ -26,9 +26,6 @@ public class P1 {
         String userChoice = "";
         UIFSM fsm  = UIFSM.IDLE;
 
-        ObjectOutputStream oos;
-        ObjectInputStream ois;
-
         String msg = "Client Start process ... \n";
         System.out.print(msg);
 
@@ -77,11 +74,6 @@ public class P1 {
                     List<ServerInfo> serverInfos = UIParser.addMultipleParser(userChoice.toString());
                     for(ServerInfo s : serverInfos){
                         addRequest(s._ipAddr, s._port, Server._threadSafeList);
-                        try{
-                            Thread.sleep(250);
-                        }catch (InterruptedException e){
-                            System.out.print("InterruptedException\n");
-                        }
                     }
                     fsm = UIFSM.IDLE;
                     break;
@@ -168,9 +160,15 @@ public class P1 {
         try{
             Socket socket = new Socket(ip, port);
             ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
             os.writeInt(RequestProtocol.ADD);
+            os.flush();
             os.writeObject(list);
-            os.close();
+            os.flush();
+            int result = is.readInt();
+            if(result != RequestProtocol.ACK){
+                System.out.print("ACK ERROR\n");
+            }
             socket.close();
         }catch (IOException e){
             System.out.print("IOException: " + e + "\n" );
@@ -181,9 +179,14 @@ public class P1 {
         try{
             Socket socket = new Socket(ip, port);
             ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
             os.writeInt(RequestProtocol.OUT);
             os.writeObject(tuple);
             os.flush();
+            int result = is.readInt();
+            if(result != RequestProtocol.ACK){
+                System.out.print("ACK ERROR\n");
+            }
             socket.close();
         }catch (IOException e){
             System.out.print("IOException P1: " + e + "\n" );
@@ -197,9 +200,16 @@ public class P1 {
             ObjectInputStream is = new ObjectInputStream(socket.getInputStream());
             os.writeInt(RequestProtocol.RD);
             os.writeObject(tuple);
+            os.flush();
             int result = is.readInt();
             if(_tuple.get_list() == null){
                 _tuple.set_list(((Tuple) is.readObject()).get_list());
+                os.writeInt(RequestProtocol.ACK);
+                os.flush();
+            }else{
+                is.readObject();
+                os.writeInt(RequestProtocol.ACK);
+                os.flush();
             }
             is.close();
             os.close();
@@ -223,18 +233,25 @@ public class P1 {
             os.writeObject(tuple);
             os.flush();
             int result = is.readInt();
-            if(result == RequestProtocol.NOTUPLE){
-                System.out.print("There is no tuple.\n");
+            if(_tuple.get_list() == null){ // TODO: here need to be improved
+                _tuple.set_list(((Tuple) is.readObject()).get_list());
+                tuple.set_list(_tuple.get_list());
+                os.writeInt(RequestProtocol.ACK);
+                os.flush();
             }else{
+                is.readObject();
                 os.writeInt(RequestProtocol.ACK);
                 os.flush();
             }
             is.close();
             os.close();
             socket.close();
-            return true;
+            return result == RequestProtocol.HASTUPLE;
         }catch (IOException e){
             System.out.print("IOException: " + e + "\n" );
+            return false;
+        }catch (ClassNotFoundException e){
+            System.out.print("ClassNotFoundException: " + e + "\n");
             return false;
         }
     }

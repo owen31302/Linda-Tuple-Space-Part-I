@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -24,8 +25,8 @@ public class Worker implements Runnable {
                     System.out.print("RequestProtocol: ADD\n");
                     // Receive the other one's nets file.
                     CopyOnWriteArrayList<ServerInfo> threadSafeList = (CopyOnWriteArrayList<ServerInfo>)ois.readObject();
-                    ois.close();
-                    _clientSocket.close();
+                    oos.writeInt(RequestProtocol.ACK);
+                    oos.flush();
 
                     // Traverse nets file
                     CopyOnWriteArrayList<ServerInfo> tempList = new CopyOnWriteArrayList<>(threadSafeList);
@@ -55,17 +56,13 @@ public class Worker implements Runnable {
                     // Send the newest nets to the missing server
                     for(ServerInfo serverInfo : missList){
                         P1.addRequest(serverInfo._ipAddr, serverInfo._port, tempList);
-                        try {
-                            Thread.sleep(200);
-                        }catch (InterruptedException e){
-                            System.out.print("InterruptedException");
-                        }
                     }
                     break;
                 case RequestProtocol.OUT:
                     System.out.print("RequestProtocol: OUT\n");
                     Tuple temp = (Tuple)ois.readObject();
-                    _clientSocket.close();
+                    oos.writeInt(RequestProtocol.ACK);
+                    oos.flush();
                     if(Server._concurrentHashMap.containsKey(temp)){
                         Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) + 1);
                     }else{
@@ -78,16 +75,9 @@ public class Worker implements Runnable {
                 case RequestProtocol.IN:
                     System.out.print("RequestProtocol: IN\n");
                     temp = (Tuple)ois.readObject();
-                    synchronized (Server.LOCK) {
-                        while (!Server._concurrentHashMap.containsKey(temp)){
-                            try {
-                                Server.LOCK.wait();
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
+                    Sync(temp);
                     oos.writeInt(RequestProtocol.HASTUPLE);
+                    oos.writeObject(temp);
                     oos.flush();
                     int ack = ois.readInt();
                     if(ack == RequestProtocol.ACK){
@@ -99,91 +89,18 @@ public class Worker implements Runnable {
                     }else{
                         System.out.print("Cancel IN.\n");
                     }
-                    oos.close();
-                    ois.close();
-                    _clientSocket.close();
                     break;
                 case RequestProtocol.RD:
                     System.out.print("RequestProtocol: RD\n");
                     temp = (Tuple)ois.readObject();
-                    boolean find = false;
-                    synchronized (Server.LOCK) {
-                        // size = 0 => no ?
-                        // size > 0 => has ?
-                        if(temp.get_qLocations().size() == 0){
-                            while (!Server._concurrentHashMap.containsKey(temp)){
-                                try {
-                                    Server.LOCK.wait();
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                            oos.writeObject(temp);
-                            oos.flush();
-                        }else{
-                            while (!find){
-                                outerLoop:
-                                for(Tuple t : Server._concurrentHashMap.keySet()){
-                                    if(temp.get_list().length == t.get_list().length){
-                                        for(int i = 0; i<temp.get_list().length; i++){
-                                            if(temp.get_qLocations().contains(i)){
-                                                String str = temp.get_list()[i];
-                                                String type = str.substring(str.indexOf(":")+1, str.length());
-                                                switch (type){
-                                                    case "string":
-                                                        if(t.get_list()[i].charAt(0) != '"'){
-                                                            continue outerLoop;
-                                                        }
-                                                        break;
-                                                    case "int":
-                                                        try {
-                                                            Integer.parseInt(t.get_list()[i]);
-                                                        }catch (NumberFormatException e){
-                                                            continue outerLoop;
-                                                        }
-                                                        break;
-                                                    case "integer":
-                                                        try {
-                                                            Integer.parseInt(t.get_list()[i]);
-                                                        }catch (NumberFormatException e){
-                                                            continue outerLoop;
-                                                        }
-                                                        break;
-                                                    case "float":
-                                                        try{
-                                                            Float.parseFloat(t.get_list()[i]);
-                                                        }catch (NumberFormatException e1){
-                                                            continue outerLoop;
-                                                        }
-                                                        break;
-                                                }
-                                            }else{
-                                                if(!t.get_list()[i].equals(temp.get_list()[i])){
-                                                    continue outerLoop;
-                                                }
-                                            } // ? or not
-                                        } // matching every column
-                                        temp = t;
-                                        find = true;
-                                        break outerLoop;
-                                    } // check length
-                                } // for
-                                if(!find){
-                                    try {
-                                        Server.LOCK.wait();
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            } // while (!find)
-                        } //get_qLocations
-                    } //synchronized
+                    Sync(temp);
                     oos.writeInt(RequestProtocol.HASTUPLE);
                     oos.writeObject(temp);
                     oos.flush();
-                    oos.close();
-                    ois.close();
-                    _clientSocket.close();
+                    int result = ois.readInt();
+                    if(result != RequestProtocol.ACK){
+                        System.out.print("ACK ERROR\n");
+                    }
                     break;
             }
         }catch (java.io.IOException e){
@@ -191,5 +108,80 @@ public class Worker implements Runnable {
         }catch (java.lang.ClassNotFoundException e){
             System.out.print("ClassNotFoundException");
         }
+    }
+
+    private void Sync(Tuple temp){
+
+            boolean find = false;
+            synchronized (Server.LOCK) {
+                // size = 0 => no ?
+                // size > 0 => has ?
+                if(temp.get_qLocations().size() == 0){
+                    while (!Server._concurrentHashMap.containsKey(temp)){
+                        try {
+                            Server.LOCK.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }else{
+                    while (!find){
+                        outerLoop:
+                        for(Tuple t : Server._concurrentHashMap.keySet()){
+                            if(temp.get_list().length == t.get_list().length){
+                                for(int i = 0; i<temp.get_list().length; i++){
+                                    if(temp.get_qLocations().contains(i)){
+                                        String str = temp.get_list()[i];
+                                        String type = str.substring(str.indexOf(":")+1, str.length());
+                                        switch (type){
+                                            case "string":
+                                                if(t.get_list()[i].charAt(0) != '"'){
+                                                    continue outerLoop;
+                                                }
+                                                break;
+                                            case "int":
+                                                try {
+                                                    Integer.parseInt(t.get_list()[i]);
+                                                }catch (NumberFormatException e){
+                                                    continue outerLoop;
+                                                }
+                                                break;
+                                            case "integer":
+                                                try {
+                                                    Integer.parseInt(t.get_list()[i]);
+                                                }catch (NumberFormatException e){
+                                                    continue outerLoop;
+                                                }
+                                                break;
+                                            case "float":
+                                                try{
+                                                    Float.parseFloat(t.get_list()[i]);
+                                                }catch (NumberFormatException e1){
+                                                    continue outerLoop;
+                                                }
+                                                break;
+                                        }
+                                    }else{
+                                        if(!t.get_list()[i].equals(temp.get_list()[i])){
+                                            continue outerLoop;
+                                        }
+                                    } // ? or not
+                                } // matching every column
+                                temp.set_list(t.get_list());
+                                find = true;
+                                break outerLoop;
+                            } // check length
+                        } // for
+                        if(!find){
+                            try {
+                                Server.LOCK.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    } // while (!find)
+                } //get_qLocations
+            } //synchronized
+
     }
 }
