@@ -87,7 +87,7 @@ public class Worker implements Runnable {
                             Server._concurrentHashMap.put(temp, Server._concurrentHashMap.get(temp) - 1);
                         }
                     }else{
-                        System.out.print("Cancel IN.\n");
+                        System.out.print("Wrong cmd.\n");
                     }
                     break;
                 case RequestProtocol.RD:

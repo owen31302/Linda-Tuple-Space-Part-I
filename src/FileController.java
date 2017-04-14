@@ -13,7 +13,7 @@ public class FileController {
             }else{
                 f.mkdir();
                 Runtime.getRuntime().exec( "chmod " + mode + " " + f.toPath() );
-                System.out.println("DIR created " + path + "\n");
+                System.out.println("DIR created " + path + "");
             }
         }catch (java.io.IOException e){
             System.out.print("IOException\n");
@@ -28,7 +28,7 @@ public class FileController {
             }else{
                 f.createNewFile();
                 Runtime.getRuntime().exec( "chmod " + mode + " " + f.toPath() );
-                System.out.println("File created " + path + "\n");
+                System.out.println("File created " + path + "");
             }
         }catch (java.io.IOException e){
             System.out.print("IOException");
@@ -64,7 +64,7 @@ public class FileController {
             System.out.print("ClassNotFoundException");
         }catch(IOException e){
             // if dat file is empty or finish reading will evoke IOException.
-            System.out.print("IOException inner.\n");
+            //System.out.print("IOException inner.\n");
         }
     }
 

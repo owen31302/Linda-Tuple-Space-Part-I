@@ -26,7 +26,7 @@ public class P1 {
         String userChoice = "";
         UIFSM fsm  = UIFSM.IDLE;
 
-        String msg = "Client Start process ... \n";
+        String msg = "Client (P1) Start process ... \n";
         System.out.print(msg);
 
         // check folder path/file
@@ -40,13 +40,24 @@ public class P1 {
         Thread thread = new Thread(new Server());
         thread.start();
 
+        // --- Make an delay to let Server thread run first
         try{
             Thread.sleep(100);
         }catch (java.lang.InterruptedException e){
             System.out.print("InterruptedException\n");
         }
 
-        // UI logic
+        /** UI logic
+         *  IDEL: wait for user input
+         *  ADD: add other servers, support multiple add by add(host_name ip port)(host_name ip port)...
+         *  DELETE: for future support.
+         *  OUT: put tuple into tuple space.
+         *  RD: find the tuple in tuple space without removing it. (?i:int) (?s:string) (?f:float) is supported.
+         *  IN: find the tuple in tuple space and removes it. (?i:int) (?s:string) (?f:float) is supported.
+         *  PRINTNETS: print all the server info in the local nets file.
+         *  PRINTTUPLES: print all tuples store in this server.
+         */
+
         while(fsm != UIFSM.EXIT){
             switch (fsm){
                 case IDLE:
@@ -97,6 +108,7 @@ public class P1 {
                     if(UIParser.outParser(userChoice.toString(), tuple)){
                         if(tuple.get_qLocations().size() == 0){
                             int index = Md5sum(tuple, Server._threadSafeList.size());
+                            System.out.print("Waiting for data... \n" );
                             if(readRequest(Server._threadSafeList.get(index)._ipAddr,
                                     Server._threadSafeList.get(index)._port, tuple)){
                                 msg = "rd tuple " + tuple.get_str() + " on " + Server._threadSafeList.get(index)._ipAddr+"\n";
@@ -130,17 +142,38 @@ public class P1 {
                 case IN:
                     tuple = new Tuple();
                     if(UIParser.outParser(userChoice.toString(), tuple)){
-                        int index = Md5sum(tuple, Server._threadSafeList.size());
-                        System.out.print("Waiting for data... \n" );
-                        if(inRequest(Server._threadSafeList.get(index)._ipAddr,
-                                Server._threadSafeList.get(index)._port,
-                                tuple)){
-                            msg = "in tuple " + tuple.get_str() + " on " + Server._threadSafeList.get(index)._ipAddr+"\n";
-                            System.out.print(msg);
-                        }else{
-                            msg = "Tuple does not exist.\n";
-                            System.out.print(msg);
+                        if(tuple.get_qLocations().size() == 0){
+                            int index = Md5sum(tuple, Server._threadSafeList.size());
+                            System.out.print("Waiting for data... \n" );
+                            if(inRequest(Server._threadSafeList.get(index)._ipAddr,
+                                    Server._threadSafeList.get(index)._port,
+                                    tuple)){
+                                msg = "in tuple " + tuple.get_str() + " on " + Server._threadSafeList.get(index)._ipAddr+"\n";
+                                System.out.print(msg);
+                            }
+                        }else {
+                            // broadcast
+                            ArrayList<Thread> threads = new ArrayList<>();
+                            for(int i = 0; i<Server._threadSafeList.size();i++){
+                                ServerInfo serverInfo = Server._threadSafeList.get(i);
+                                threads.add(new Thread(new UIWorker(i, serverInfo._ipAddr, serverInfo._port, tuple, UIFSM.IN.getValue())));
+                                threads.get(i).start();
+                            }
+                            synchronized (QLOCK){
+                                try {
+                                    QLOCK.wait();
+                                    for(Thread th : threads){
+                                        th.interrupt();
+                                    }
+                                    msg = "in tuple " + _tuple.get_str() + " on " + Server._threadSafeList.get(P1._first)._ipAddr+"\n";
+                                    System.out.print(msg);
+                                    P1._first = -1;
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
                         }
+
                     }
                     fsm = UIFSM.IDLE;
                     break;

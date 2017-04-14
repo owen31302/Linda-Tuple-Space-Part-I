@@ -42,7 +42,7 @@ public class Server implements Runnable{
 
             while(!s.isClosed()){
                 Socket clientSocket = s.accept();
-                System.out.print("I got a client\n");
+                //System.out.print("I got a client\n");
                 Thread thread = new Thread(new Worker(clientSocket));
                 thread.start();
             }

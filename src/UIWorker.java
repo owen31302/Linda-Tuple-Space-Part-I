@@ -28,7 +28,14 @@ public class UIWorker implements Runnable {
                 }
             }
         }else if (_operation == UIFSM.IN.getValue()){
-
+            if(P1.inRequest(_ip, _port, _tuple)){
+                synchronized (P1.QLOCK) {
+                    if(P1._first == -1){
+                        P1._first = _id;
+                    }
+                    P1.QLOCK.notifyAll();
+                }
+            }
         }else{
             System.out.print("Wrong command.\n");
         }
