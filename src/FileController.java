@@ -1,4 +1,6 @@
 import java.io.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -9,11 +11,11 @@ public class FileController {
         try{
             File f = new File(path);
             if(f.exists() && f.isDirectory()) {
-                System.out.print(path + " already created.\n");
+                //System.out.print(path + " already created.\n");
             }else{
                 f.mkdir();
                 Runtime.getRuntime().exec( "chmod " + mode + " " + f.toPath() );
-                System.out.println("DIR created " + path + "");
+                //System.out.println("DIR created " + path + "");
             }
         }catch (java.io.IOException e){
             System.out.print("IOException\n");
@@ -24,11 +26,11 @@ public class FileController {
         try{
             File f = new File(path);
             if(f.exists() && !f.isDirectory()) {
-                System.out.print(path + " already created.\n");
+                //System.out.print(path + " already created.\n");
             }else{
                 f.createNewFile();
                 Runtime.getRuntime().exec( "chmod " + mode + " " + f.toPath() );
-                System.out.println("File created " + path + "");
+                //System.out.println("File created " + path + "");
             }
         }catch (java.io.IOException e){
             System.out.print("IOException");
@@ -44,7 +46,7 @@ public class FileController {
             }
             out.close();
             fileOut.close();
-            System.out.print("Finished saving. \n");
+            //System.out.print("Finished saving. \n");
         }catch (java.io.FileNotFoundException e){
             System.out.print("FileNotFoundException.\n");
         }catch (java.io.IOException e){
@@ -70,7 +72,7 @@ public class FileController {
 
     public static boolean checkHost(int id, String name, String ip, int port, CopyOnWriteArrayList<ServerInfo> threadSafeList){
         if(threadSafeList.size()==0){
-            System.out.print("New nets lists.\n");
+            //System.out.print("New nets lists.\n");
             threadSafeList.add(new ServerInfo(id, name, ip, port));
             FileController.writeNets("/tmp/ylin/linda/" + Server.get_name() + "/nets.dat", threadSafeList);
             return true;
@@ -89,6 +91,37 @@ public class FileController {
     public static void printNets(CopyOnWriteArrayList<ServerInfo> threadSafeList){
         for(ServerInfo serverInfo : threadSafeList){
             System.out.print(serverInfo._name + " @ " + serverInfo._ipAddr + " on " + serverInfo._port + "\n");
+        }
+    }
+
+    public static void writeTuples(String filePath, ConcurrentHashMap<Tuple, Integer> concurrentHashMap){
+        try{
+            FileOutputStream fileOut = new FileOutputStream(filePath);
+            ObjectOutputStream out = new ObjectOutputStream(fileOut);
+            out.writeObject(concurrentHashMap);
+            out.close();
+            fileOut.close();
+            //System.out.print("Finished saving. \n");
+        }catch (java.io.FileNotFoundException e){
+            System.out.print("FileNotFoundException.\n");
+        }catch (java.io.IOException e){
+            System.out.print("IOException.\n");
+        }
+    }
+
+    public static void readTuples(String filePath, ConcurrentHashMap<Tuple, Integer> concurrentHashMap){
+        try{
+            FileInputStream fileIn = new FileInputStream(filePath);
+            ObjectInputStream in = new ObjectInputStream(fileIn);
+            ConcurrentHashMap<Tuple, Integer> tempMap = (ConcurrentHashMap<Tuple, Integer>)in.readObject();
+            for(Map.Entry element : tempMap.entrySet()){
+                concurrentHashMap.put((Tuple) element.getKey(), (Integer) element.getValue());
+            }
+        }catch (java.lang.ClassNotFoundException e){
+            System.out.print("ClassNotFoundException");
+        }catch(IOException e){
+            // if dat file is empty or finish reading will evoke IOException.
+            //System.out.print("IOException inner.\n");
         }
     }
 

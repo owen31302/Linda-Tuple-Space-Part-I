@@ -1,4 +1,3 @@
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -22,7 +21,7 @@ public class Worker implements Runnable {
             int action = ois.readInt();
             switch (action){
                 case RequestProtocol.ADD:
-                    System.out.print("RequestProtocol: ADD\n");
+                    // System.out.print("RequestProtocol: ADD\n");
                     // Receive the other one's nets file.
                     CopyOnWriteArrayList<ServerInfo> threadSafeList = (CopyOnWriteArrayList<ServerInfo>)ois.readObject();
                     oos.writeInt(RequestProtocol.ACK);
@@ -59,7 +58,7 @@ public class Worker implements Runnable {
                     }
                     break;
                 case RequestProtocol.OUT:
-                    System.out.print("RequestProtocol: OUT\n");
+                    //System.out.print("RequestProtocol: OUT\n");
                     Tuple temp = (Tuple)ois.readObject();
                     oos.writeInt(RequestProtocol.ACK);
                     oos.flush();
@@ -68,12 +67,13 @@ public class Worker implements Runnable {
                     }else{
                         Server._concurrentHashMap.put(temp, 1);
                     }
+                    FileController.writeTuples("/tmp/ylin/linda/" + Server.get_name() + "/tuples.dat", Server._concurrentHashMap);
                     synchronized (Server.LOCK) {
                         Server.LOCK.notifyAll();
                     }
                     break;
                 case RequestProtocol.IN:
-                    System.out.print("RequestProtocol: IN\n");
+                    //System.out.print("RequestProtocol: IN\n");
                     temp = (Tuple)ois.readObject();
                     Sync(temp);
                     oos.writeInt(RequestProtocol.HASTUPLE);
@@ -89,9 +89,11 @@ public class Worker implements Runnable {
                     }else{
                         System.out.print("Wrong cmd.\n");
                     }
+                    FileController.writeTuples("/tmp/ylin/linda/" + Server.get_name() + "/tuples.dat", Server._concurrentHashMap);
+                    Server.LOCK._hasTaken = false;
                     break;
                 case RequestProtocol.RD:
-                    System.out.print("RequestProtocol: RD\n");
+                    //System.out.print("RequestProtocol: RD\n");
                     temp = (Tuple)ois.readObject();
                     Sync(temp);
                     oos.writeInt(RequestProtocol.HASTUPLE);
@@ -101,6 +103,7 @@ public class Worker implements Runnable {
                     if(result != RequestProtocol.ACK){
                         System.out.print("ACK ERROR\n");
                     }
+                    Server.LOCK._hasTaken = false;
                     break;
             }
         }catch (java.io.IOException e){
@@ -117,13 +120,14 @@ public class Worker implements Runnable {
                 // size = 0 => no ?
                 // size > 0 => has ?
                 if(temp.get_qLocations().size() == 0){
-                    while (!Server._concurrentHashMap.containsKey(temp)){
+                    while (!Server._concurrentHashMap.containsKey(temp) || (Server._concurrentHashMap.containsKey(temp) && Server.LOCK._hasTaken)){
                         try {
                             Server.LOCK.wait();
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
+                    Server.LOCK._hasTaken = true;
                 }else{
                     while (!find){
                         outerLoop:
@@ -172,7 +176,7 @@ public class Worker implements Runnable {
                                 break outerLoop;
                             } // check length
                         } // for
-                        if(!find){
+                        if(!find || (find && Server.LOCK._hasTaken)){
                             try {
                                 Server.LOCK.wait();
                             } catch (InterruptedException e) {
@@ -180,8 +184,84 @@ public class Worker implements Runnable {
                             }
                         }
                     } // while (!find)
+                    Server.LOCK._hasTaken = true;
                 } //get_qLocations
             } //synchronized
 
     }
+
+    /*private void SyncRD(Tuple temp){
+
+        boolean find = false;
+        synchronized (Server.LOCK) {
+            // size = 0 => no ?
+            // size > 0 => has ?
+            if(temp.get_qLocations().size() == 0){
+                while (!Server._concurrentHashMap.containsKey(temp)){
+                    try {
+                        Server.LOCK.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }else{
+                while (!find){
+                    outerLoop:
+                    for(Tuple t : Server._concurrentHashMap.keySet()){
+                        if(temp.get_list().length == t.get_list().length){
+                            for(int i = 0; i<temp.get_list().length; i++){
+                                if(temp.get_qLocations().contains(i)){
+                                    String str = temp.get_list()[i];
+                                    String type = str.substring(str.indexOf(":")+1, str.length());
+                                    switch (type){
+                                        case "string":
+                                            if(t.get_list()[i].charAt(0) != '"'){
+                                                continue outerLoop;
+                                            }
+                                            break;
+                                        case "int":
+                                            try {
+                                                Integer.parseInt(t.get_list()[i]);
+                                            }catch (NumberFormatException e){
+                                                continue outerLoop;
+                                            }
+                                            break;
+                                        case "integer":
+                                            try {
+                                                Integer.parseInt(t.get_list()[i]);
+                                            }catch (NumberFormatException e){
+                                                continue outerLoop;
+                                            }
+                                            break;
+                                        case "float":
+                                            try{
+                                                Float.parseFloat(t.get_list()[i]);
+                                            }catch (NumberFormatException e1){
+                                                continue outerLoop;
+                                            }
+                                            break;
+                                    }
+                                }else{
+                                    if(!t.get_list()[i].equals(temp.get_list()[i])){
+                                        continue outerLoop;
+                                    }
+                                } // ? or not
+                            } // matching every column
+                            temp.set_list(t.get_list());
+                            find = true;
+                            break outerLoop;
+                        } // check length
+                    } // for
+                    if(!find){
+                        try {
+                            Server.LOCK.wait();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } // while (!find)
+            } //get_qLocations
+        } //synchronized
+
+    }*/
 }

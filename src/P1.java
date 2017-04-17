@@ -27,7 +27,7 @@ public class P1 {
         UIFSM fsm  = UIFSM.IDLE;
 
         String msg = "Client (P1) Start process ... \n";
-        System.out.print(msg);
+        //System.out.print(msg);
 
         // check folder path/file
         FileController.setFolder("/tmp/ylin", "777");
@@ -204,7 +204,7 @@ public class P1 {
             }
             socket.close();
         }catch (IOException e){
-            System.out.print("IOException: " + e + "\n" );
+            System.out.print("Please check the other server is active or key in the correct address and port.\n");
         }
     }
 

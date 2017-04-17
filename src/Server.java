@@ -16,7 +16,7 @@ public class Server implements Runnable{
     static public CopyOnWriteArrayList<ServerInfo> _threadSafeList = new CopyOnWriteArrayList<>();
     static public ConcurrentHashMap<Tuple, Integer> _concurrentHashMap = new ConcurrentHashMap<>();
 
-    public static final Object LOCK = new Object();
+    public static final Lock LOCK = new Lock();
 
     @Override
     public void run() {
@@ -33,6 +33,7 @@ public class Server implements Runnable{
 
             // read host info from nets.dat file
             FileController.readNets("/tmp/ylin/linda/" + Server.get_name() + "/nets.dat", _threadSafeList);
+            FileController.readTuples("/tmp/ylin/linda/" + Server.get_name() + "/tuples.dat", _concurrentHashMap);
             // check if current host name existed in the list before or newly created one
             if(!FileController.checkHost(_id, _name, _ip, _port, _threadSafeList)){
                 System.out.print("Please enter the same host name.\n");

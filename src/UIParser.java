@@ -41,22 +41,34 @@ public class UIParser {
     }
 
     public static boolean addParser(String s, StringBuilder ip, StringBuilder port){
-        String[] a = s.split(" ");
+        String[] a = s.split(",");
+
+        for(int i = 0; i<a.length; i++){
+            a[i] = a[i].trim();
+        }
 
         // check three parts
         // check ip addr format
         // check port range
         if(a.length == 3){
 
-            String[] subA = a[1].split(".");
-            if(subA.length == 4){
-                for (String str : subA){
+            String[] subA = a[1].split("\\.");
+            for(int i = 0; i<subA.length; i++){
+                subA[i] = subA[i].trim();
+            }
+
+
+            if(subA.length == 4 && subA[0].equals("129") && subA[1].equals("210") && subA[2].equals("16")){
+                /*for (String str : subA){
                     int number = Integer.parseInt(str);
                     if(!(number >= 0 && number <= 255)){
                         System.out.print("You have to set addr within 0 to 255.\n");
                         return false;
                     }
-                }
+                }*/
+            }else{
+                System.out.print("Please key in the correct format xxx.xxx.xxx.xxx .\n");
+                return false;
             }
 
             int p = Integer.parseInt(a[2]);
@@ -70,6 +82,8 @@ public class UIParser {
             port.delete(0, port.length());
             port.append(a[2]);
             return true;
+        }else{
+            System.out.print("Please key in the correct format add(hostname, ip, port).\n");
         }
         return false;
     }
